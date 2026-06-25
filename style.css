@@ -917,7 +917,7 @@ input:checked + .slider:before {
 
 .toast {
   background-color: var(--text-color);
-  color: #454B66;
+  color: #E1B941;
   padding: 8px 22px;
   border-radius: 20px;
   font-size: 0.85rem;
