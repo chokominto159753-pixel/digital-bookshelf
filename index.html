@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文わけ文</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Noto Serif JP, Playfair Display, Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+JP:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ゲストモード警告バー -->
+  <div id="guest-warning" class="warning-bar hidden">
+    <div class="warning-content">
+      <svg class="icon-warning" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+      </svg>
+      <span>閲覧者モードです。お気に入りや作成した小説はブラウザに一時保存されます。</span>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <h1 class="brand-title">文わけ文</h1>
+      
+      <div class="header-actions">
+        <!-- クイックテーマ切り替えトグル (月/太陽) -->
+        <button id="btn-theme-toggle" class="btn btn-icon" aria-label="テーマ切り替え">
+          <svg id="theme-svg-icon" class="icon" viewBox="0 0 24 24"></svg>
+        </button>
+
+        <div id="auth-section">
+          <button id="btn-login" class="btn btn-outline">管理者ログイン</button>
+          <div id="user-profile" class="hidden">
+            <span id="user-name"></span>
+            <button id="btn-logout" class="btn btn-text">ログアウト</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 上部固定：検索・ソート・カテゴリ（「書棚」ビューでのみ表示） -->
+    <div id="search-filter-area" class="sticky-header">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="本文、出典、カテゴリを検索..." aria-label="検索">
+        <button id="btn-clear-search" class="hidden">
+          <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      
+      <div class="filter-controls">
+        <div class="category-chips-wrapper">
+          <div id="category-chips" class="category-chips">
+            <!-- カテゴリチップが動的に挿入されます -->
+          </div>
+        </div>
+        <div class="sort-wrapper">
+          <select id="sort-select" class="sort-select" aria-label="並べ替え">
+            <option value="newest">新しい順</option>
+            <option value="oldest">古い順</option>
+            <option value="random">ランダム</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <main class="app-main">
+      
+      <!-- 1. ユーザー用：書棚閲覧ビュー -->
+      <section id="view-notebook" class="view-section">
+        <div id="sentence-list" class="card-list">
+          <!-- 文カードリスト -->
+        </div>
+      </section>
+
+      <!-- 2. ユーザー用：小説作成室ビュー（つなぎ言葉編集対応） -->
+      <section id="view-novel-builder" class="view-section hidden">
+        <div class="section-header-title">
+          <h2>小説作成室</h2>
+          <p class="section-desc">書棚で集めたお気に入りの文を並び替え、文の間に言葉を綴り合わせて一つの物語を作ります。</p>
+        </div>
+
+        <div class="novel-workspace">
+          <!-- 執筆中の文リストとつなぎ枠 -->
+          <div id="novel-sentence-list" class="novel-sentence-list">
+            <!-- 選択された一文とつなぎ枠が並びます -->
+          </div>
+
+          <!-- 小説原稿の出力エリア -->
+          <div class="novel-output-box">
+            <h3>原稿プレビュー</h3>
+            <textarea id="novel-preview-textarea" readonly placeholder="一文を追加すると、ここに小説の原稿が自動結合されます。"></textarea>
+            <div class="form-actions">
+              <button id="btn-copy-novel" class="btn btn-primary">原稿をコピーする</button>
+              <button id="btn-clear-novel" class="btn btn-outline">全クリア</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ユーザー用：お気に入り一覧ビュー -->
+      <section id="view-favorites" class="view-section hidden">
+        <h2>お気に入りアーカイブ</h2>
+        <div id="favorite-list" class="card-list">
+          <!-- お気に入りカード -->
+        </div>
+      </section>
+
+      <!-- 4. 管理者用：管理室ビュー (ログイン時のみ表示可能) -->
+      <section id="view-admin" class="view-section hidden">
+        <div class="section-header">
+          <h2>管理室（データ登録・カスタム辞書）</h2>
+        </div>
+
+        <!-- 一文登録エリア -->
+        <div class="admin-panel">
+          <h3>新規の一文を分割保存</h3>
+          <form id="form-register-sentence">
+            <div class="form-group">
+              <label for="input-text">文章</label>
+              <textarea id="input-text" placeholder="文章を入力してください。。！？や改行で自動分割されます。" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="input-source">出典</label>
+              <input type="text" id="input-source" placeholder="著者名、書名など">
+            </div>
+            <div class="form-group flex-row">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-split-comma">
+                読点（、）でも分割する
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary">登録・分割実行</button>
+          </form>
+        </div>
+
+        <!-- 青空文庫インポート -->
+        <div class="admin-panel">
+          <h3>青空文庫インポート</h3>
+          <form id="form-aozora-import">
+            <div class="form-group">
+              <label for="input-aozora-url">図書HTML URL</label>
+              <input type="url" id="input-aozora-url" placeholder="https://www.aozora.gr.jp/cards/.../files/....html" required>
+            </div>
+            <button type="submit" class="btn btn-outline">自動解析・分割取り込み</button>
+          </form>
+        </div>
+
+        <!-- カテゴリ・辞書管理 -->
+        <div class="admin-panel">
+          <div class="section-header">
+            <h3>カテゴリ自動仕分け辞書</h3>
+            <button id="btn-open-add-category" class="btn btn-primary">+ 新規カテゴリ</button>
+          </div>
+          <div id="category-dictionary-list" class="dictionary-list">
+            <!-- カテゴリ管理カード -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. ユーザー用：環境設定ビュー -->
+      <section id="view-settings" class="view-section hidden">
+        <h2>環境設定</h2>
+        <div class="settings-form">
+          <div class="setting-item">
+            <span class="setting-label">文字サイズ</span>
+            <div class="segmented-control" id="control-font-size">
+              <button data-size="small" class="segment-btn">小</button>
+              <button data-size="medium" class="segment-btn active">中</button>
+              <button data-size="large" class="segment-btn">大</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <span class="setting-label">同一文章の重複除外</span>
+            <label class="switch">
+              <input type="checkbox" id="settings-dedupe">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <span class="setting-label">入力候補（サジェスト）</span>
+            <label class="switch">
+              <input type="checkbox" id="settings-suggestion">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <span class="setting-label">テーマ設定</span>
+            <div class="segmented-control" id="control-theme">
+              <button data-theme="pastel-blue" class="segment-btn active">昼の海辺</button>
+              <button data-theme="dark" class="segment-btn">夜の水面</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <span class="setting-label">アニメーション効果</span>
+            <label class="switch">
+              <input type="checkbox" id="settings-animation" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 下部固定ナビゲーション (絵文字なし) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-target="view-notebook">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M12 21c-1.17-1.34-3.53-2-6-2H3V5h3c2.03 0 4.2 1.34 6 3 1.8-1.66 3.97-3 6-3h3v14h-3c-2.47 0-4.83.66-6 2zM12 8v11"/>
+        </svg>
+        <span class="nav-label">書棚</span>
+      </button>
+      <button class="nav-item" data-target="view-novel-builder">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+        <span class="nav-label">小説作成</span>
+      </button>
+      <button class="nav-item" data-target="view-favorites">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+        </svg>
+        <span class="nav-label">お気に入り</span>
+      </button>
+      <button id="nav-admin" class="nav-item hidden" data-target="view-admin">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <span class="nav-label">管理室</span>
+      </button>
+      <button class="nav-item" data-target="view-settings">
+        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+          <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+        </svg>
+        <span class="nav-label">設定</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- お気に入り解除確認モーダル -->
+  <div id="modal-confirm-unfavorite" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>お気に入りの解除</h3>
+      <p>この文章をお気に入りから削除しますか？</p>
+      <div class="modal-actions">
+        <button id="btn-cancel-unfavorite" class="btn btn-outline">キャンセル</button>
+        <button id="btn-confirm-unfavorite" class="btn btn-danger">解除する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 一文削除確認モーダル -->
+  <div id="modal-confirm-delete" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>一文の削除</h3>
+      <p>この文章を本棚から完全に削除しますか？<br><small class="modal-alert-text">※この操作は取り消せません。</small></p>
+      <div class="modal-actions">
+        <button id="btn-cancel-delete" class="btn btn-outline">キャンセル</button>
+        <button id="btn-confirm-delete" class="btn btn-danger">削除する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新規カテゴリ登録モーダル -->
+  <div id="modal-add-category" class="modal-overlay hidden">
+    <div class="modal large">
+      <h3>新規カテゴリの登録</h3>
+      <form id="form-add-category">
+        <div class="form-group">
+          <label for="category-name">カテゴリ名</label>
+          <input type="text" id="category-name" placeholder="例: 自然" required>
+        </div>
+        <div class="form-group">
+          <label for="category-keywords">キーワード（カンマ区切り）</label>
+          <input type="text" id="category-keywords" placeholder="例: 森, 川, 山, 木々">
+        </div>
+        
+        <!-- 学習アシスト -->
+        <div class="learning-assist-section">
+          <h4>学習アシスト (辞書候補の自動抽出)</h4>
+          <p class="desc">登録済みの一文から、自動でキーワード候補（2〜8文字）を抽出しました。タップして選択してください。</p>
+          <div id="learning-suggestions" class="suggestion-chips">
+            <!-- 候補が挿入される -->
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="btn-close-category-modal" class="btn btn-outline">キャンセル</button>
+          <button type="submit" class="btn btn-primary">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
